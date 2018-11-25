@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.rotac.appsmarthealth">
+
+    <!-- インターネット通信を行うため必要 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- アカウント情報を取得するため必要 -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <!-- GPS位置情報を取得するために必要 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- BODY情報を読み書きするために必要 -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        tools:ignore="GoogleAppIndexingWarning">
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="com.google.android.gms.version"
+                android:value="@integer/google_play_services_version" />
+        </activity>
+        <service android:name=".MySensorService"
+            android:process=":sensor">
+            <intent-filter>
+                <action android:name="com.google.android.gms.fitness.service.FitnessSensorService" />
+                <!-- include at least one mimeType filter for the supported data types -->
+                <data android:mimeType="vnd.google.fitness.data_type/com.google.weight" />
+                <!--<data android:mimeType="vnd.google.fitness.data_type/com.google.location.sample" />-->
+                <!--<data android:mimeType="vnd.google.fitness.data_type/com.google.heart_rate.bpm" />-->
+                <!--<data android:mimeType="vnd.google.fitness.data_type/com.google.activity.samples" />-->
+                <!--<data android:mimeType="vnd.google.fitness.data_type/com.google.activity.summary" />-->
+                <!--<data android:mimeType="vnd.google.fitness.data_type/com.google.height" />-->
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>
