@@ -1,5 +1,15 @@
 package com.example.rotac.appsmarthealth;
 
+import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.IBinder;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import com.google.android.gms.fitness.data.DataPoint;
@@ -12,6 +22,7 @@ import com.google.android.gms.fitness.service.FitnessSensorServiceRequest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +33,52 @@ public class MySensorService extends FitnessSensorService {
     private DataSource mDataSource = null;
     private FitnessSensorServiceRequest mRequest = null;
 
-    private Timer mTimer = null;
+//    TODO Should be removed
+//    private Timer mTimer = null;
+
+    // Broadcast
+    private BroadcastReceiver receiver;
+    private IntentFilter filter;
+
+    // Bluetooth
+    private BluetoothAdapter mBluetoothAdapter = null;
+    private BluetoothChatService mChatService = null;
+    @SuppressLint("HandlerLeak")
+    private final Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case Constants.MESSAGE_STATE_CHANGE:
+                    switch (msg.arg1) {
+                        case BluetoothChatService.STATE_CONNECTED:
+                            Log.d(TAG, "bluetooth connected.");
+                            break;
+                        case BluetoothChatService.STATE_CONNECTING:
+                            Log.d(TAG, "bluetooth connecting...");
+                            break;
+                        case BluetoothChatService.STATE_LISTEN:
+                        case BluetoothChatService.STATE_NONE:
+                            Log.d(TAG, "bluetooth not connected.");
+                            break;
+                    }
+                    break;
+                case Constants.MESSAGE_WRITE:
+                    Log.d(TAG, "bluetooth writing.");
+                    break;
+                case Constants.MESSAGE_READ:
+                    byte[] readBuf = (byte[]) msg.obj;
+                    String readMessage = new String(readBuf, 0, msg.arg1);
+                    Log.d(TAG, "bluetooth reading. : " + readMessage);
+                    break;
+                case Constants.MESSAGE_DEVICE_NAME:
+                    Log.d(TAG, "bluetooth device name.");
+                    break;
+                case Constants.MESSAGE_TOAST:
+                    Log.d(TAG, "bluetooth toast.");
+                    break;
+            }
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -39,6 +95,68 @@ public class MySensorService extends FitnessSensorService {
                 .setType(DataSource.TYPE_RAW)
                 .build();
         // 3. Initialize some data structure to keep track of a registration for each sensor.
+
+        // ----------- broadcast receiver -------------
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "connectBluetooth on MySensorService");
+                emitDataPoints(20.0f);
+
+                if (mChatService != null && mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
+                    // Get a set of currently paired devices
+                    Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+
+                    // If there are paired devices, add each one to the ArrayAdapter
+                    if (pairedDevices.size() > 0) {
+                        for (BluetoothDevice device : pairedDevices) {
+                            Log.d(TAG, device.getName());
+                            if (device.getName().equals("RNBT-C2AD") ) {
+                                mChatService.connect(device, true);
+                                Log.d(TAG, "connect bluetooth device.");
+                            }
+                        }
+                    } else {
+                        Log.d(TAG, "no bluetooth devices.");
+                    }
+
+                }
+            }
+        };
+        filter = new IntentFilter("CONNECT_BT_ACTION");
+        registerReceiver(receiver, filter);
+
+        // ----------- bluetooth -------------
+        // Create
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        // onStart
+        if (mBluetoothAdapter == null) {
+            Log.e(TAG, "Bluetooth is not supported!");
+            onDestroy();
+        } else if (!mBluetoothAdapter.isEnabled()) {
+            Log.e(TAG, "Bluetooth is not enabled!");
+        } else if (mChatService == null) {
+            mChatService = new BluetoothChatService(mHandler);
+        }
+        // Resume
+        if (mChatService != null) {
+            // Only if the state is STATE_NONE, do we know that we haven't started already
+            if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
+                // Start the Bluetooth chat services
+                mChatService.start();
+            }
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        unregisterReceiver(receiver);
+        if (mChatService != null) {
+            mChatService.stop();
+        }
+        Log.d(TAG, "MySensorService destroyed");
     }
 
     @Override
@@ -59,12 +177,33 @@ public class MySensorService extends FitnessSensorService {
         return filteredDataSourceList;
     }
 
-    private void emitDataPoints() {
+    /**
+     * Sends a message.
+     *
+     * @param message A string of text to send.
+     */
+    private void sendMessage(String message) {
+        // Check that we're actually connected before trying anything
+        if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
+            Log.e(TAG, "cannot send message because of no connection!");
+            return;
+        }
+
+        // Check that there's actually something to send
+        if (message.length() > 0) {
+            Log.d(TAG, "send message to bluetooth");
+            // Get the message bytes and tell the BluetoothChatService to write
+            byte[] send = message.getBytes();
+            mChatService.write(send);
+        }
+    }
+
+    private void emitDataPoints(float value) {
         if (mRequest != null){
             Log.d(TAG, "emitDataPoints");
             DataPoint mDataPoint = DataPoint.create(mDataSource);
             mDataPoint.setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-            mDataPoint.getValue(Field.FIELD_WEIGHT).setFloat(10.0f);
+            mDataPoint.getValue(Field.FIELD_WEIGHT).setFloat(value);
             List<DataPoint> mDataPointList = new ArrayList<>();
             mDataPointList.add(mDataPoint);
             try {
@@ -87,14 +226,16 @@ public class MySensorService extends FitnessSensorService {
                 ) {
             Log.d(TAG, "Registering Success");
             mRequest = request;
-            mTimer = new Timer();
-            mTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    Log.d(TAG, "TimerExecute");
-                    emitDataPoints();
-                }
-            }, 10000, 5000);
+
+//            TODO Should be removed
+//            mTimer = new Timer();
+//            mTimer.schedule(new TimerTask() {
+//                @Override
+//                public void run() {
+//                    Log.d(TAG, "TimerExecute");
+//                    emitDataPoints(10.0f);
+//                }
+//            }, 10000, 5000);
 
             return true;
         }
@@ -112,7 +253,8 @@ public class MySensorService extends FitnessSensorService {
         // 2. Discard the reference to the registration request object
         if (dataSource.equals(mDataSource)) {
             mRequest = null;
-            mTimer.cancel();
+//            TODO Should be removed
+//            mTimer.cancel();
             return true;
         }
 

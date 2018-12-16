@@ -8,7 +8,39 @@
     tools:context=".MainActivity">
 
     <TextView
-        android:id="@+id/TextView1"
+        android:id="@+id/TextViewBTCTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:gravity="bottom"
+        android:text="Bluetooth接続"
+        android:textSize="24sp" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/textViewBTCSts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:text="------"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/buttonBTC"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:text="接続" />
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/TextViewMeasureTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0.5"
@@ -22,7 +54,7 @@
         android:layout_weight="1">
 
         <TextView
-            android:id="@+id/textView4"
+            android:id="@+id/textViewMeasureSts"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
@@ -31,7 +63,7 @@
             android:textSize="18sp" />
 
         <Button
-            android:id="@+id/button1"
+            android:id="@+id/buttonMeasure"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
@@ -40,7 +72,7 @@
     </RelativeLayout>
 
     <TextView
-        android:id="@+id/textView2"
+        android:id="@+id/textViewHistTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0.5"
@@ -54,7 +86,7 @@
         android:layout_weight="1">
 
         <TextView
-            android:id="@+id/textView5"
+            android:id="@+id/textViewHistSts"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
@@ -63,7 +95,7 @@
             android:textSize="18sp" />
 
         <Button
-            android:id="@+id/button2"
+            android:id="@+id/buttonHist"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
@@ -72,7 +104,7 @@
     </RelativeLayout>
 
     <TextView
-        android:id="@+id/textView3"
+        android:id="@+id/textViewSbsTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0.5"
@@ -81,7 +113,7 @@
         android:textSize="24sp" />
 
     <Switch
-        android:id="@+id/switch1"
+        android:id="@+id/switchSbs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="1"

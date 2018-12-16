@@ -49,22 +49,32 @@ public class MainActivity extends AppCompatActivity {
     private boolean isSubscribed = false;
 
     // Layout Views
-    private TextView mTextView4;
-    private TextView mTextView5;
-    private Switch mSwitch1;
+    private TextView mTextViewBTCSts;
+    private TextView mTextViewMeasureSts;
+    private TextView mTextViewHistSts;
+    private Switch mSwitchSbs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-        mTextView4 = findViewById(R.id.textView4);
-        mTextView5 = findViewById(R.id.textView5);
-        Button mButton1 = findViewById(R.id.button1);
-        Button mButton2 = findViewById(R.id.button2);
-        mSwitch1 = findViewById(R.id.switch1);
+        mTextViewBTCSts = findViewById(R.id.textViewBTCSts);
+        mTextViewMeasureSts = findViewById(R.id.textViewMeasureSts);
+        mTextViewHistSts = findViewById(R.id.textViewHistSts);
+        Button mButtonBTC = findViewById(R.id.buttonBTC);
+        Button mButtonMeasure = findViewById(R.id.buttonMeasure);
+        Button mButtonHist = findViewById(R.id.buttonHist);
+        mSwitchSbs = findViewById(R.id.switchSbs);
 
-        mButton1.setOnClickListener(new View.OnClickListener() {
+        mButtonBTC.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                connectBluetooth();
+            }
+        });
+
+        mButtonMeasure.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (mDataSet != null) {
@@ -73,14 +83,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mButton2.setOnClickListener(new View.OnClickListener() {
+        mButtonHist.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 countMeasurementTimes();
             }
         });
 
-        mSwitch1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        mSwitchSbs.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 if (b != isSubscribed){
@@ -126,6 +136,14 @@ public class MainActivity extends AppCompatActivity {
             findDataSources();
             checkSubscriptionOfWeightData();
         }
+    }
+
+    //  ------------- Control MySensorService Bluetooth ------------
+    private void connectBluetooth() {
+        Log.d(TAG, "connectBluetooth");
+        Intent i = new Intent();
+        i.setAction("CONNECT_BT_ACTION");
+        sendBroadcast(i);
     }
 
     //  ------------- Sign In Functions ------------------
@@ -201,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
                                 isSubscribed = true;
                             }
                         }
-                        mSwitch1.setChecked(isSubscribed);
+                        mSwitchSbs.setChecked(isSubscribed);
                     }
                 });
     }
@@ -252,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
                         for (DataSet ds : dataSets){
                             if (ds.getDataType().equals(DataType.TYPE_WEIGHT)) {
                                 int counts = ds.getDataPoints().size();
-                                mTextView5.setText("Total: " + counts);
+                                mTextViewHistSts.setText("Total: " + counts);
                             }else{
                                 Log.d(TAG, "not TYPE_WEIGHT :" + ds.getDataType().toString());
                             }
@@ -328,7 +346,7 @@ public class MainActivity extends AppCompatActivity {
                             mDataSet.add(dataPoint);
 
                             DateFormat sdf = getDateTimeInstance();
-                            mTextView4.setText("Weight: " + val.toString() + " kg\n(" + sdf.format(dataPoint.getTimestamp(TimeUnit.MILLISECONDS)) +")");
+                            mTextViewMeasureSts.setText("Weight: " + val.toString() + " kg\n(" + sdf.format(dataPoint.getTimestamp(TimeUnit.MILLISECONDS)) +")");
                         }
                     }
                 };

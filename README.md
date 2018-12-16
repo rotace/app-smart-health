@@ -10,7 +10,6 @@
 
 また、デバッグ用アプリケーション（python）の機能は、以下のとおり。
 1. GoogleFitへREST_APIを用いてアクセスし、記録内容を確認する。
-1. PCからBluetoothモジュールを操作してAndroidアプリへコマンドを送信する。
 
 ## OAuthの設定
 参考文献：[グーグルのAPIを使うときに欠かせないGoogle OAuthの作り方と使い方](http://www.atmarkit.co.jp/ait/articles/1509/15/news017.html)  
@@ -31,4 +30,6 @@
 * C:\Program Files\Android\Android Studio\jre\bin\keytool.exe
 
 ## 体重計とArduinoとBluetoothモジュールの結線方法
+参考文献：[体重計をハックして無線化してみた](https://qiita.com/shozaburo/items/8c0aa7ad5c16878bc3c5)  
+
 ～作成中～
