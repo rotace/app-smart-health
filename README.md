@@ -11,6 +11,10 @@
 また、デバッグ用アプリケーション（python）の機能は、以下のとおり。
 1. GoogleFitへREST_APIを用いてアクセスし、記録内容を確認する。
 
+## 関連WEBサイト
+* [Google Fit](https://fit.google.com)
+* [Google Cloud Console](https://console.cloud.google.com/)
+
 ## OAuthの設定
 参考文献：[グーグルのAPIを使うときに欠かせないGoogle OAuthの作り方と使い方](http://www.atmarkit.co.jp/ait/articles/1509/15/news017.html)  
 

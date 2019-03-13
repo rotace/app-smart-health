@@ -111,7 +111,7 @@ public class MySensorService extends FitnessSensorService {
                     if (pairedDevices.size() > 0) {
                         for (BluetoothDevice device : pairedDevices) {
                             Log.d(TAG, device.getName());
-                            if (device.getName().equals("RNBT-C2AD") ) {
+                            if (device.getName().equals("HC-06") ) {
                                 mChatService.connect(device, true);
                                 Log.d(TAG, "connect bluetooth device.");
                             }
