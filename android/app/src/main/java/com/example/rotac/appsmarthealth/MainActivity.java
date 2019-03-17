@@ -1,7 +1,11 @@
 package com.example.rotac.appsmarthealth;
 
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -54,9 +58,25 @@ public class MainActivity extends AppCompatActivity {
     private TextView mTextViewHistSts;
     private Switch mSwitchSbs;
 
+//    private ServiceConnection mMySensorServiceConnection = new ServiceConnection() {
+//        @Override
+//        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+//
+//        }
+//
+//        @Override
+//        public void onServiceDisconnected(ComponentName componentName) {
+//
+//        }
+//    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // start MySensorService for allocating it's starting time
+        startService(new Intent(getApplication(), MySensorService.class));
+//        bindService(new Intent(getApplication(), MySensorService.class), mMySensorServiceConnection, Context.BIND_AUTO_CREATE);
 
         setContentView(R.layout.activity_main);
         mTextViewBTCSts = findViewById(R.id.textViewBTCSts);
@@ -309,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
                             public void onSuccess(List<DataSource> dataSources) {
                                 for (DataSource dataSource : dataSources) {
                                     Log.i(TAG, "Data source found: " + dataSource.toString());
-                                    Log.i(TAG, "Data Source type: " + dataSource.getDataType().getName());
+                                    Log.i(TAG, "Data source type: " + dataSource.getDataType().getName());
 
                                     if (dataSource.getDataType().equals(DataType.TYPE_WEIGHT)){
                                         mDataSource = dataSource;
