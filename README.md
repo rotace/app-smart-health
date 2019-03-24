@@ -6,10 +6,8 @@
 1. OAuthの設定（GoogleFitにアクセスするために必要）
 1. Arduinoプログラムのインストール（ Arduino Pro Mini に Arduino IDE を用いてインストール）
 1. 体重計とArduinoとBluetoothモジュールを結線
-1. AndroidアプリとBluetoothモジュールをペアリング
-
-また、デバッグ用アプリケーション（python）の機能は、以下のとおり。
-1. GoogleFitへREST_APIを用いてアクセスし、記録内容を確認する。
+1. AndroidとBluetoothモジュールをペアリング
+1. Androidアプリから接続
 
 ## 関連WEBサイト
 * [Google Fit](https://fit.google.com)
@@ -36,4 +34,38 @@
 ## 体重計とArduinoとBluetoothモジュールの結線方法
 参考文献：[体重計をハックして無線化してみた](https://qiita.com/shozaburo/items/8c0aa7ad5c16878bc3c5)  
 
-～作成中～
+![接続図](https://raw.github.com/wiki/rotace/app-smart-health/images/structure.png)
+
+* 運用時構成は、実際にアプリと体重計をBluetoothで接続する構成
+* デバッグ構成１は、Linuxと体重計をBluetoothで接続する構成（ゼロ点補正等はこの構成で行う）
+* デバッグ構成２は、Linuxと体重計をUSBで接続する構成（arduinoの書き換えはこの構成で行う）
+
+なお、デバッグ構成２ではBluetoothモジュールを外す必要があるが、面倒であればVCC端子のみ外せば良い。
+
+## ゼロ点補正、勾配補正
+
+1. デバッグ構成２で結線し、IS_DEBUGオプションを1にしてarduinoに書き込む。
+1. デバッグ構成１で結線を行う。
+1. Bluetooth Managerを起動する。
+1. （ペアリング設定が残っていなければ、）LinuxとBluetoothのペアリングを行う。*1
+1. Serial Portで接続する。/dev/rfcommX (Xは数字)にデバイスが生成される。
+1. screenで接続する。($ sudo screen /dev/rfcommX 9600)
+1. arduinoで読み取った電圧値や変換した体重値が1秒ごとに表示される。
+1. ゼロ点補正は、体重計に乗らない状態でONを押し、表示される電圧値（0~1023）を読み取る。
+1. 勾配補正は、体重計をOFFにして数秒待ったのち、体重計に乗って表示される電圧値（0~1023）と体重値（float値）を読み取る。
+1. デバッグ構成２で結線し、先ほど読み取ったゼロ点電圧値と、それらから計算される電圧―体重勾配値（g/volt）を修正して、arduinoに書き込む。また、IS_DEBUGオプションを0に戻す。
+1. 運用時構成で結線してテストする。
+
+*1 LinuxとBluetoothのペアリングがうまくいかない場合は、下記のbluetoothctlを使ったペアリングを参照
+
+
+## LinuxとBluetoothのペアリング方法
+参考文献：[LinuxのコマンドラインでBluetooth接続](https://qiita.com/propella/items/6daf3c56e26f709b4141)
+
+1. ターミナルでbluetoothctlを起動
+1. [bluetooth]# list
+1. [bluetooth]# show
+1. [bluetooth]# scan on
+1. [bluetooth]# devices
+1. [bluetooth]# pair (device address)
+
