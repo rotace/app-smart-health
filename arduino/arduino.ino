@@ -20,7 +20,7 @@
   http://www.arduino.cc/en/Tutorial/AnalogInOutSerial
 */
 
-#define IS_DEBUG (1)
+#define IS_DEBUG (0)
 
 #define FILTER_NUM  (10) // filter_array number
 #define MEMORY_NUM (5) // memory_array number
@@ -41,8 +41,8 @@ int memory_counter_w = 0;
 int state_counter = 0;
 int print_counter = 0;
 
-int zero_offset_val = 776; // [value] @ 0kg
-int val_to_gram = 275; // [g] per [value]
+int zero_offset_val = 785; // [value] @ 0kg
+int val_to_gram = 273; // [g] per [value]
 
 int old_val = 0;
 int dif_val = 0;
@@ -55,11 +55,26 @@ int memory_val = 0;
 float memory_kg = 0.0;
 float current_kg = 0.0;
 
+String in_str = "";
+bool is_eol = false;
+bool is_emit = false;
+
+void serial_printf(char *fmt, ...){
+  char buf[128];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(buf, 128, fmt, args);
+  va_end(args);
+  Serial.print(buf);
+}
+
 void setup() {
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
+//Serial.begin(115200);
+  in_str.reserve(200);
 }
 
 void loop() {
@@ -108,6 +123,7 @@ switch(state){
     // state change (measure)     ref) 60kg = about 560
     if( dif_val < -10 ){
       state = 2;
+      is_emit = true;
       memory_val = memory_array[memory_counter_r];
       digitalWrite(LED_BUILTIN, HIGH);
     }
@@ -134,16 +150,7 @@ switch(state){
   memory_kg = val_to_gram/1000.0*(float)map(memory_val, 0, 1023, zero_offset_val, zero_offset_val-1023);
   current_kg = val_to_gram/1000.0*(float)map(filter_val, 0, 1023, zero_offset_val, zero_offset_val-1023);
 
-if(!IS_DEBUG && print_counter==0){
-  // transmit the results to the Mobile Application.
-  Serial.print("C");
-  Serial.print( (int)( current_kg * 10 ) );
-  Serial.print("M");
-  Serial.print( (int)( memory_kg * 10 ) );
-  Serial.println("");
-}
-
-if(IS_DEBUG && print_counter==0){
+if( IS_DEBUG && print_counter==0){
   // print the results to the Serial Monitor:
   Serial.print("sensor = ");
   Serial.print(sensor_val);
@@ -164,9 +171,37 @@ if(IS_DEBUG && print_counter==0){
   Serial.println("");
 }
 
-if(!IS_DEBUG && Serial.available() ){
-  // this section receive command and correct conversion formula.
-  
+if(!(IS_DEBUG) && is_emit ){
+  if( 20.0 < memory_kg && memory_kg < 80.0 ){
+    serial_printf("<M%4d>\n",(int)( memory_kg * 10 )  );
+  }
+  is_emit = false;
+}
+
+if(!(IS_DEBUG) && print_counter==0 ){
+  serial_printf("<C%4d>\n",(int)( current_kg * 10 )  );
+}
+
+while( !(IS_DEBUG) && Serial.available() ){
+  char in_char = (char)Serial.read();
+  in_str += in_char;
+  if(in_char == '\n' ){
+      is_eol = true;
+  }
+}
+
+if(is_eol){
+  char header = *in_str.c_str();
+  Serial.print("CMD:");
+  Serial.print(in_str);
+  switch(header){
+    case 'a':
+      serial_printf("<C%4d>\n",(int)( current_kg * 10 ) );
+      break;
+    default:
+      Serial.println(":fail!");
+  }
+    
   if(0){
     // zero offset
     zero_offset_val = filter_val;
@@ -177,6 +212,8 @@ if(!IS_DEBUG && Serial.available() ){
     val_to_gram = 57.8 / (float)( zero_offset_val - memory_val );
   }
 
+  in_str = "";
+  is_eol = false;
 }
   
   // wait 2 milliseconds before the next loop for the analog-to-digital
