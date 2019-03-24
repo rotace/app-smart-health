@@ -2,9 +2,9 @@ package com.example.rotac.appsmarthealth;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -48,6 +48,9 @@ public class MainActivity extends AppCompatActivity {
     private OnDataPointListener mListener = null;
     private boolean isSubscribed = false;
 
+    // BroadcastReceiver
+    private MyBroadcastReceiver mReceiver = null;
+
     // Layout Views
     private TextView mTextViewBTCSts;
     private TextView mTextViewMeasureSts;
@@ -57,6 +60,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // start MySensorService for allocating it's starting time
+        startService(new Intent(getApplication(), MySensorService.class));
 
         setContentView(R.layout.activity_main);
         mTextViewBTCSts = findViewById(R.id.textViewBTCSts);
@@ -104,6 +110,30 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mReceiver = MyBroadcastReceiver.register(getApplicationContext(), new MyBroadcastReceiver.Callback() {
+            @Override
+            public void onEventInvoked(int id, double value) {
+                switch (id){
+                    case MyBroadcastReceiver.STATE_NOT_CONNECTED:
+                        mTextViewBTCSts.setText("not connected.");
+                        break;
+
+                    case MyBroadcastReceiver.STATE_CONNECTING:
+                        mTextViewBTCSts.setText("connecting...");
+                        break;
+
+                    case MyBroadcastReceiver.STATE_CONNECTED:
+                        mTextViewBTCSts.setText("connected.");
+                        break;
+
+                    case MyBroadcastReceiver.STATE_CONNECTED_WITH_WEIGHT:
+                        mTextViewBTCSts.setText("Weight: " + String.format("%.1f", value) + " kg");
+                    default:
+                        break;
+                }
+            }
+        });
+
         initialize();
     }
 
@@ -141,9 +171,7 @@ public class MainActivity extends AppCompatActivity {
     //  ------------- Control MySensorService Bluetooth ------------
     private void connectBluetooth() {
         Log.d(TAG, "connectBluetooth");
-        Intent i = new Intent();
-        i.setAction("CONNECT_BT_ACTION");
-        sendBroadcast(i);
+        MyBroadcastReceiver.sendBroadcast(getApplicationContext(), 1000, 0.0);
     }
 
     //  ------------- Sign In Functions ------------------
@@ -309,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
                             public void onSuccess(List<DataSource> dataSources) {
                                 for (DataSource dataSource : dataSources) {
                                     Log.i(TAG, "Data source found: " + dataSource.toString());
-                                    Log.i(TAG, "Data Source type: " + dataSource.getDataType().getName());
+                                    Log.i(TAG, "Data source type: " + dataSource.getDataType().getName());
 
                                     if (dataSource.getDataType().equals(DataType.TYPE_WEIGHT)){
                                         mDataSource = dataSource;

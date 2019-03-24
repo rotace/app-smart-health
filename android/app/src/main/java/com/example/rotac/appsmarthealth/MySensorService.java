@@ -3,11 +3,6 @@ package com.example.rotac.appsmarthealth;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.IBinder;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -23,8 +18,6 @@ import com.google.android.gms.fitness.service.FitnessSensorServiceRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 
@@ -32,17 +25,13 @@ public class MySensorService extends FitnessSensorService {
     private static final String TAG = "Smart_Health_Sensor";
     private DataSource mDataSource = null;
     private FitnessSensorServiceRequest mRequest = null;
-
-//    TODO Should be removed
-//    private Timer mTimer = null;
-
-    // Broadcast
-    private BroadcastReceiver receiver;
-    private IntentFilter filter;
+    private StringBuilder sb = new StringBuilder();
 
     // Bluetooth
     private BluetoothAdapter mBluetoothAdapter = null;
     private BluetoothChatService mChatService = null;
+    private MyBroadcastReceiver mReceiver = null;
+
     @SuppressLint("HandlerLeak")
     private final Handler mHandler = new Handler() {
         @Override
@@ -52,24 +41,85 @@ public class MySensorService extends FitnessSensorService {
                     switch (msg.arg1) {
                         case BluetoothChatService.STATE_CONNECTED:
                             Log.d(TAG, "bluetooth connected.");
+                            MyBroadcastReceiver.sendBroadcast(
+                                    getApplicationContext(),
+                                    MyBroadcastReceiver.STATE_CONNECTED,
+                                    0.0
+                            );
                             break;
+
                         case BluetoothChatService.STATE_CONNECTING:
                             Log.d(TAG, "bluetooth connecting...");
+                            MyBroadcastReceiver.sendBroadcast(
+                                    getApplicationContext(),
+                                    MyBroadcastReceiver.STATE_CONNECTING,
+                                    0.0
+                            );
                             break;
+
                         case BluetoothChatService.STATE_LISTEN:
                         case BluetoothChatService.STATE_NONE:
                             Log.d(TAG, "bluetooth not connected.");
+                            MyBroadcastReceiver.sendBroadcast(
+                                    getApplicationContext(),
+                                    MyBroadcastReceiver.STATE_NOT_CONNECTED,
+                                    0.0
+                            );
                             break;
+
                     }
                     break;
+
                 case Constants.MESSAGE_WRITE:
                     Log.d(TAG, "bluetooth writing.");
                     break;
+
                 case Constants.MESSAGE_READ:
-                    byte[] readBuf = (byte[]) msg.obj;
-                    String readMessage = new String(readBuf, 0, msg.arg1);
-                    Log.d(TAG, "bluetooth reading. : " + readMessage);
+                    byte[] b = (byte[]) msg.obj;
+                    String s = new String(b, 0, msg.arg1);
+
+                    for(int i=0; i<s.length(); i++){
+                        char c = s.charAt(i);
+
+                        if(c == '\n'){
+                            continue;
+                        }
+
+                        sb.append(c);
+
+                        if(c == '>'){
+                            String str = sb.toString();
+//                            Log.d(TAG, "bluetooth reading. : " + str );
+
+                            if(str.length() < 6){
+                                continue;
+                            }
+
+                            Integer current_weight;
+
+                            switch(str.charAt(1)){
+                                case 'C':
+                                    current_weight = Integer.parseInt( str.substring(2,6).trim() );
+                                    MyBroadcastReceiver.sendBroadcast(
+                                            getApplicationContext(),
+                                            MyBroadcastReceiver.STATE_CONNECTED_WITH_WEIGHT,
+                                            current_weight / 10.0f
+                                    );
+                                    break;
+
+                                case 'M':
+                                    current_weight = Integer.parseInt( str.substring(2,6).trim() );
+                                    emitDataPoints(current_weight / 10.0f);
+                                    break;
+
+                                default:
+                                    Log.e(TAG, "bluetooth reading. : cmd invalid!");
+                            }
+                            sb = new StringBuilder();
+                        }
+                    }
                     break;
+
                 case Constants.MESSAGE_DEVICE_NAME:
                     Log.d(TAG, "bluetooth device name.");
                     break;
@@ -97,34 +147,42 @@ public class MySensorService extends FitnessSensorService {
         // 3. Initialize some data structure to keep track of a registration for each sensor.
 
         // ----------- broadcast receiver -------------
-        receiver = new BroadcastReceiver() {
+
+        mReceiver = MyBroadcastReceiver.register(getApplicationContext(), new MyBroadcastReceiver.Callback() {
             @Override
-            public void onReceive(Context context, Intent intent) {
-                Log.d(TAG, "connectBluetooth on MySensorService");
-                emitDataPoints(20.0f);
+            public void onEventInvoked(int id, double value) {
 
-                if (mChatService != null && mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
-                    // Get a set of currently paired devices
-                    Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+                switch (id){
+                    case MyBroadcastReceiver.CMD_CONNECT_BLUETOOTH:
+                        Log.d(TAG, "connectBluetooth on MySensorService");
 
-                    // If there are paired devices, add each one to the ArrayAdapter
-                    if (pairedDevices.size() > 0) {
-                        for (BluetoothDevice device : pairedDevices) {
-                            Log.d(TAG, device.getName());
-                            if (device.getName().equals("HC-06") ) {
-                                mChatService.connect(device, true);
-                                Log.d(TAG, "connect bluetooth device.");
+                        if (mChatService != null) {
+                            // Get a set of currently paired devices
+                            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+
+                            // If there are paired devices, add each one to the ArrayAdapter
+                            if (pairedDevices.size() > 0) {
+                                for (BluetoothDevice device : pairedDevices) {
+                                    Log.d(TAG, device.getName());
+                                    if (device.getName().equals("HC-06") ) {
+                                        mChatService.connect(device, true);
+                                        Log.d(TAG, "connect bluetooth device.");
+                                    }
+                                }
+                            } else {
+                                Log.d(TAG, "no bluetooth devices.");
                             }
-                        }
-                    } else {
-                        Log.d(TAG, "no bluetooth devices.");
-                    }
 
+                        } else {
+                            Log.d(TAG, "mChatService not ready.");
+                        }
+                        break;
+
+                    default:
+                        break;
                 }
             }
-        };
-        filter = new IntentFilter("CONNECT_BT_ACTION");
-        registerReceiver(receiver, filter);
+        });
 
         // ----------- bluetooth -------------
         // Create
@@ -140,7 +198,7 @@ public class MySensorService extends FitnessSensorService {
         }
         // Resume
         if (mChatService != null) {
-            // Only if the state is STATE_NONE, do we know that we haven't started already
+            // Only if the state is STATE_NOT_CONNECTED, do we know that we haven't started already
             if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
                 // Start the Bluetooth chat services
                 mChatService.start();
@@ -152,7 +210,8 @@ public class MySensorService extends FitnessSensorService {
     public void onDestroy() {
         super.onDestroy();
 
-        unregisterReceiver(receiver);
+        mReceiver.unregister(getApplicationContext());
+
         if (mChatService != null) {
             mChatService.stop();
         }
@@ -209,8 +268,10 @@ public class MySensorService extends FitnessSensorService {
             try {
                 mRequest.getDispatcher().publish(mDataPointList);
             } catch (android.os.RemoteException e){
-                Log.d(TAG, "RemoteException");
+                Log.e(TAG, "RemoteException");
             }
+        }else{
+            Log.e(TAG, "mRequest is null!");
         }
     }
 
@@ -226,23 +287,12 @@ public class MySensorService extends FitnessSensorService {
                 ) {
             Log.d(TAG, "Registering Success");
             mRequest = request;
-
-//            TODO Should be removed
-//            mTimer = new Timer();
-//            mTimer.schedule(new TimerTask() {
-//                @Override
-//                public void run() {
-//                    Log.d(TAG, "TimerExecute");
-//                    emitDataPoints(10.0f);
-//                }
-//            }, 10000, 5000);
-
             return true;
         }
         // 4. Configure your sensor according to the request parameters.
         // 5. When the sensor has new data, deliver it to the platform by calling
         //    request.getDispatcher().publish(List<DataPoint> dataPoints)
-        Log.d(TAG, "Registering Failed");
+        Log.e(TAG, "Registering Failed");
         return false;
     }
 
@@ -253,8 +303,6 @@ public class MySensorService extends FitnessSensorService {
         // 2. Discard the reference to the registration request object
         if (dataSource.equals(mDataSource)) {
             mRequest = null;
-//            TODO Should be removed
-//            mTimer.cancel();
             return true;
         }
 

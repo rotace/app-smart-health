@@ -36,7 +36,7 @@
         <service android:name=".MySensorService"
             android:process=":sensor">
             <intent-filter>
-                <action android:name="CONNECT_BT_ACTION" />
+                <action android:name="com.example.rotac.appsmarthealth.action_invoked" />
                 <action android:name="com.google.android.gms.fitness.service.FitnessSensorService" />
                 <!-- include at least one mimeType filter for the supported data types -->
                 <data android:mimeType="vnd.google.fitness.data_type/com.google.weight" />
